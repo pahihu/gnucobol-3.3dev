@@ -1,0 +1,195 @@
+#! /bin/sh
+#
+# run_prog_manual.sh gnucobol/tests
+#
+# Copyright (C) 2014-2022,2024 Free Software Foundation, Inc.
+# Written by Edward Hart, Simon Sobisch
+#
+# This file is part of GnuCOBOL.
+#
+# The GnuCOBOL compiler is free software: you can redistribute it
+# and/or modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# GnuCOBOL is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GnuCOBOL.  If not, see <https://www.gnu.org/licenses/>.
+
+# Running test program "prog" in a detached terminal and pass its return
+# code to the testsuite after the terminal ends.
+
+# You may change run_prog_manual.sh according to you needs, especially
+# if you want to use a different test runner than the default ones.
+
+# test runner evaluation, you may want to override this in the
+# generated file
+case "$TESTRUNNER" in
+  xterm | screen | tmux | cmd)
+    # we do as instructed...
+    ;;
+  "")
+    if ( command -v xterm  >/dev/null 2>&1) && test -n "$DISPLAY"; then
+      TESTRUNNER=xterm
+    elif command -v screen >/dev/null 2>&1; then
+      TESTRUNNER=screen
+    elif command -v tmux   >/dev/null 2>&1; then
+      TESTRUNNER=tmux
+    elif test -n "$MSYSTEM"; then
+      TESTRUNNER=cmd
+    else
+      (>&2 echo "don't know which test runner to use, either install"
+       echo "one of the default supported ones (xterm, screen, tmux) or"
+       echo "adjust $0")
+      exit 1
+    fi
+    ;;
+  *)
+    (>&2 echo "unknown test runner '""$TESTRUNNER""'")
+    exit 1
+esac
+
+
+abs_builddir="@abs_builddir@"
+TIMEOUT=30        # timeout in seconds
+
+if test -n "$MSYSTEM"; then
+  SLEEP_SCALE=1     # always possible, done in MSYS to reduce number of spawned processes
+else
+  SLEEP_SCALE=0.1   # needs a "modern" sleep implementation
+fi
+
+# Note: DESC is passed by the caller
+TITLE="GnuCOBOL Manual Test Run - $DESC"
+
+_test_with_xterm () {
+   xterm -T "$TITLE" \
+        -fa 'Liberation Mono' -fs 14 \
+        -e "sh -c \"($* 2>./syserr.log && echo \$? > ./result) || echo 1 > ./result\""
+}
+
+
+export SCREENDIR="${abs_builddir}/screen"
+
+# Note: when using the GNU screen manager you have to either call
+#       this script with the parameter "attach" or
+#       run `screen -r "GCTESTS"` with appropriate SCREENDIR
+#       in a separate terminal within 5 seconds after starting the tests
+_test_with_screen () {
+  test -d "$SCREENDIR" || mkdir -p -m 700 "$SCREENDIR"
+  # check if screen session already exists, setup if not
+  if ! screen -S "GCTESTS" -X select . 2>/dev/null 1>&2; then
+     # Note: you may need to adjust screen's terminal to get an output matching the actual running code later
+     screen -dmS "GCTESTS" -t "GCTESTS"
+     # we have a fresh environment there - source the test config once
+     screen -S "GCTESTS" -X stuff "cd \"${abs_builddir}\" && . atconfig && . atlocal; echo
+"
+     sleep 5
+  fi
+  # run actual test in screen session
+  screen -S "GCTESTS" -X title "$TITLE"
+  screen -S "GCTESTS" -X exec ... sh -c "cd \"$PWD\" && ($* 2>./syserr.log && echo $? > ./result) || echo 1 > ./result"
+}
+_attach_to_screen () {
+  test -d "$SCREENDIR" && (screen -r "GCTESTS" ; true) && exit
+  echo "no sessions with SCREENDIR='""$SCREENDIR""'"
+}
+_kill_screen () {
+  test -d "$SCREENDIR" && (screen -S "GCTESTS" -X kill ; rm -rf "$SCREENDIR") && exit
+  echo "no sessions with SCREENDIR='""$SCREENDIR""'"
+}
+
+
+# Note: when using the terminal multiplexer you have to either call
+#       this script with the parameter "attach" or
+#       run `tmux attach -t "=GCTESTS:0"` in a separate terminal
+#       within 5 seconds after starting the tests
+_test_with_tmux () {
+  # check if tmux session already exists, setup if not
+  if ! tmux has-session -t "=GCTESTS" 2>/dev/null; then
+     # Note: you may need to adjust screen's terminal to get an output matching the actual running code later
+     tmux new-session -d -s "GCTESTS"
+     # we have a fresh environment there - source the test config once
+     tmux send-keys -t "=GCTESTS:0" "cd \"${abs_builddir}\" && . atconfig && . atlocal; echo" C-m
+     sleep 5
+  fi
+  # run actual test in screen session
+  tmux rename-window -t "=GCTESTS:0" "$TITLE"
+  tmux send-keys -t "=GCTESTS:0" "sh -c \"cd \\\"$PWD\\\" && ($* 2>./syserr.log && echo $? > ./result) || echo 1 > ./result; echo\"" C-m
+}
+_attach_to_tmux () {
+  tmux attach -t "=GCTESTS:0"
+}
+_kill_tmux () {
+  tmux has-session -t "=GCTESTS" 2>/dev/null && (tmux kill-session -t "=GCTESTS:0") && exit
+  echo "no sessions named GCTESTS"
+}
+
+
+_test_with_cmd () {
+  # run cmd to start a detached cmd (via cmd's start), and execute the tests there,
+  # to work around quoting issues we create a sub-cmd
+  echo "$(echo $* | tr '/' '\\') 2>syserr.log & echo !errorlevel! >result" > run_manual.cmd
+  cmd.exe /c "start \"$TITLE\" /wait cmd /v:on /c run_manual.cmd"
+  #if test -f ./syserr.log; then
+  #  dos2unix -q ./syserr.log
+  #fi
+}
+
+# wait TIMEOUT seconds for the result file to be available
+_wait_result () {
+  local wait_time=$TIMEOUT
+  if test "x$SLEEP_SCALE" = "x0.1"; then
+    wait_time=$(expr $((wait_time)) \* 10)
+  fi
+  until test $((wait_time)) -eq 0 -o -f "./result"; do
+    sleep "$SLEEP_SCALE"
+    wait_time=$(expr $((wait_time)) - 1)
+  done
+  test ! $((wait_time)) -eq 0
+}
+
+
+# special run to attach / kill
+if test "$1" = attach; then
+   case "$TESTRUNNER" in
+     screen) _attach_to_screen ;;
+     tmux)   _attach_to_tmux   ;;
+     *)      echo "no need for external attach with test runner \"$TESTRUNNER\"" ;;
+   esac
+   exit
+fi
+if test "$1" = kill; then
+   case "$TESTRUNNER" in
+     screen) _kill_screen ;;
+     tmux)   _kill_tmux   ;;
+     *)      echo "no need for external kill with test runner \"$TESTRUNNER\"" ;;
+   esac
+   exit
+fi
+
+
+# actual test
+rm -f ./result ./syserr.log
+case "$TESTRUNNER" in
+  xterm)  _test_with_xterm  $* || echo $? > ./result ;;
+  screen) _test_with_screen $* || echo $? > ./result ;;
+  tmux)   _test_with_tmux   $* || echo $? > ./result ;;
+  cmd)    _test_with_cmd    $* || echo $? > ./result ;;
+esac
+
+_wait_result || {
+  (>&2 echo "No result file after waiting for $TIMEOUT seconds!")
+  case "$TESTRUNNER" in
+    screen | tmux)  $0 kill;;
+  esac
+  echo 124 > ./result
+}
+if test -f ./syserr.log; then
+  (>&2 cat ./syserr.log)
+fi
+exit "$(cat ./result)"
