@@ -177,7 +177,7 @@ am__DEPENDENCIES_1 =
 libcob_la_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_libcob_la_OBJECTS = common.lo move.lo numeric.lo strings.lo \
 	fileio.lo call.lo intrinsic.lo termio.lo screenio.lo \
-	reportio.lo cobgetopt.lo mlio.lo cconv.lo profiling.lo
+	reportio.lo cobgetopt.lo mlio.lo localcharset.lo cconv.lo profiling.lo
 @LOCAL_CJSON_TRUE@nodist_libcob_la_OBJECTS = cJSON.lo
 libcob_la_OBJECTS = $(am_libcob_la_OBJECTS) \
 	$(nodist_libcob_la_OBJECTS)
@@ -207,6 +207,7 @@ am__depfiles_remade = ./$(DEPDIR)/cJSON.Plo ./$(DEPDIR)/call.Plo \
 	./$(DEPDIR)/cconv.Plo ./$(DEPDIR)/cobgetopt.Plo \
 	./$(DEPDIR)/common.Plo ./$(DEPDIR)/fileio.Plo \
 	./$(DEPDIR)/intrinsic.Plo ./$(DEPDIR)/mlio.Plo \
+	./$(DEPDIR)/localcharset.Plo \
 	./$(DEPDIR)/move.Plo ./$(DEPDIR)/numeric.Plo \
 	./$(DEPDIR)/profiling.Plo ./$(DEPDIR)/reportio.Plo \
 	./$(DEPDIR)/screenio.Plo ./$(DEPDIR)/strings.Plo \
@@ -476,7 +477,7 @@ top_srcdir = @top_srcdir@
 lib_LTLIBRARIES = libcob.la
 libcob_la_SOURCES = common.c move.c numeric.c strings.c \
 	fileio.c call.c intrinsic.c termio.c screenio.c reportio.c cobgetopt.c \
-	mlio.c coblocal.h cconv.c system.def profiling.c
+	mlio.c localcharset.c coblocal.h cconv.c system.def profiling.c
 
 EXTRA_DIST = xmlevent.def
 @LOCAL_CJSON_TRUE@nodist_libcob_la_SOURCES = cJSON.c
@@ -600,6 +601,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fileio.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/intrinsic.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mlio.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/localcharset.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/move.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/numeric.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/profiling.Plo@am__quote@ # am--include-marker
@@ -799,6 +801,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/fileio.Plo
 	-rm -f ./$(DEPDIR)/intrinsic.Plo
 	-rm -f ./$(DEPDIR)/mlio.Plo
+	-rm -f ./$(DEPDIR)/localcharset.Plo
 	-rm -f ./$(DEPDIR)/move.Plo
 	-rm -f ./$(DEPDIR)/numeric.Plo
 	-rm -f ./$(DEPDIR)/profiling.Plo
@@ -859,6 +862,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/fileio.Plo
 	-rm -f ./$(DEPDIR)/intrinsic.Plo
 	-rm -f ./$(DEPDIR)/mlio.Plo
+	-rm -f ./$(DEPDIR)/localcharset.Plo
 	-rm -f ./$(DEPDIR)/move.Plo
 	-rm -f ./$(DEPDIR)/numeric.Plo
 	-rm -f ./$(DEPDIR)/profiling.Plo

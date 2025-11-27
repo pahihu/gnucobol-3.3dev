@@ -1,3 +1,21 @@
+# GnuCOBOL 3.3dev (Chuck Haatvedt)
+
+This repo contains the patched version of Chuck Haatvedt's GnuCOBOL 3.3dev package (2025-10-20).
+
+To install on Rocky Linux 8:
+
+- install the following packages:  gmp-devel ncurses-devel libdb-devel cjson-devel gettext-devel
+
+- install `libxml2 2.14.0` from source.
+
+Then use the fresh libxml2 from above:
+
+    export XML2_CONFIG=/usr/local/bin/xml2-config
+    ./configure
+
+
+***
+
 [GnuCOBOL](https://www.gnu.org/software/gnucobol/) is a free
 COBOL compiler licensed under the GNU Public License (GPL).  
 It implements a substantial part of the COBOL 85,
